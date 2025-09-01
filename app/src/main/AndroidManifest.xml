@@ -12,7 +12,25 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GariAche">
         <activity
-            android:name=".MainActivity"
+            android:name=".OfferRideActivity"
+            android:exported="false" />
+        <activity
+            android:name=".BookingSuccessActivity"
+            android:exported="false" />
+        <activity
+            android:name=".BookingConfirmationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FindRideActivity"
+            android:exported="false" />
+        <activity
+            android:name=".HomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SplashActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
