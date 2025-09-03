@@ -1,0 +1,18 @@
+<resources>
+    <!-- Your existing strings -->
+
+    <!-- Dhaka Destinations -->
+    <string-array name="dhaka_destinations">
+        <item>Select Destination</item>
+        <item>Uttara</item>
+        <item>Mohammadpur</item>
+        <item>Mirpur 10</item>
+        <item>Mirpur 11</item>
+        <item>Mirpur 12</item>
+        <item>Motijheel</item>
+        <item>Banani</item>
+        <item>Banasree</item>
+        <item>Dhanmondi</item>
+        <item>Bijoy Sarani</item>
+    </string-array>
+</resources>

@@ -13,7 +13,7 @@ public class Ride {
     private String carColor;
     private String licensePlate;
     private String notes;
-    private String status;     // e.g., active/completed/cancelled
+    private String status; // e.g., active/completed/cancelled
 
     public Ride(int id, int driverId, String pickupPoint, String destination, String date, String time,
                 int availableSeats, int pricePerSeat, String carModel, String carColor, String licensePlate, String notes, String status) {
@@ -32,6 +32,33 @@ public class Ride {
         this.status = status;
     }
 
-    // Getters and Setters for all fields...
-    // (autogenerate in Android Studio)
+    // Getters
+    public int getId() { return id; }
+    public int getDriverId() { return driverId; }
+    public String getPickupPoint() { return pickupPoint; }
+    public String getDestination() { return destination; }
+    public String getDate() { return date; }
+    public String getTime() { return time; }
+    public int getAvailableSeats() { return availableSeats; }
+    public int getPricePerSeat() { return pricePerSeat; }
+    public String getCarModel() { return carModel; }
+    public String getCarColor() { return carColor; }
+    public String getLicensePlate() { return licensePlate; }
+    public String getNotes() { return notes; }
+    public String getStatus() { return status; }
+
+    // Setters
+    public void setId(int id) { this.id = id; }
+    public void setDriverId(int driverId) { this.driverId = driverId; }
+    public void setPickupPoint(String pickupPoint) { this.pickupPoint = pickupPoint; }
+    public void setDestination(String destination) { this.destination = destination; }
+    public void setDate(String date) { this.date = date; }
+    public void setTime(String time) { this.time = time; }
+    public void setAvailableSeats(int availableSeats) { this.availableSeats = availableSeats; }
+    public void setPricePerSeat(int pricePerSeat) { this.pricePerSeat = pricePerSeat; }
+    public void setCarModel(String carModel) { this.carModel = carModel; }
+    public void setCarColor(String carColor) { this.carColor = carColor; }
+    public void setLicensePlate(String licensePlate) { this.licensePlate = licensePlate; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public void setStatus(String status) { this.status = status; }
 }

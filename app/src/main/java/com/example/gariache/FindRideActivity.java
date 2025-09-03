@@ -3,9 +3,13 @@ package com.example.gariache;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.ImageView;
@@ -15,6 +19,7 @@ import android.widget.TimePicker;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -24,14 +29,14 @@ import java.util.List;
 
 public class FindRideActivity extends AppCompatActivity {
 
-    private TextInputEditText pickupInput, destinationInput, dateInput, timeInput;
+    private TextInputEditText pickupInput, dateInput, timeInput;
+    private AutoCompleteTextView destinationAutoComplete;
     private Button searchButton;
     private ImageView backButton;
     private LinearLayout ridesContainer, noRidesLayout;
     private TextView availableRidesTitle;
 
-    // FIREBASE TODO: Replace this with Firebase data models
-    private List<RideData> availableRides;
+    private DatabaseHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,15 +48,17 @@ public class FindRideActivity extends AppCompatActivity {
             getSupportActionBar().hide();
         }
 
+        // Initialize database helper
+        dbHelper = new DatabaseHelper(this);
+
         initializeViews();
+        setupDestinationDropdown();
         setupClickListeners();
-        // FIREBASE TODO: Replace with Firebase data loading
-        loadHardcodedRides();
     }
 
     private void initializeViews() {
         pickupInput = findViewById(R.id.pickup_input);
-        destinationInput = findViewById(R.id.destination_input);
+        destinationAutoComplete = findViewById(R.id.destination_autocomplete);
         dateInput = findViewById(R.id.date_input);
         timeInput = findViewById(R.id.time_input);
         searchButton = findViewById(R.id.search_button);
@@ -59,36 +66,49 @@ public class FindRideActivity extends AppCompatActivity {
         ridesContainer = findViewById(R.id.rides_container);
         noRidesLayout = findViewById(R.id.no_rides_layout);
         availableRidesTitle = findViewById(R.id.available_rides_title);
+
+        // Fix pickup to IUT and make it non-editable
+        pickupInput.setText("IUT");
+        pickupInput.setFocusable(false);
+        pickupInput.setClickable(false);
+        pickupInput.setCursorVisible(false);
     }
 
+    private void setupDestinationDropdown() {
+        String[] destinations = getResources().getStringArray(R.array.dhaka_destinations);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.dropdown_item, destinations);
+        destinationAutoComplete.setAdapter(adapter);
+
+        // Set white background for dropdown popup
+        destinationAutoComplete.setDropDownBackgroundResource(R.drawable.white_dropdown_background);
+
+        // Disable keyboard input, only allow selection
+        destinationAutoComplete.setKeyListener(null);
+
+        // Handle item selection
+        destinationAutoComplete.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = (String) parent.getItemAtPosition(position);
+            destinationAutoComplete.setText(selected, false);
+            destinationAutoComplete.dismissDropDown();
+        });
+
+        // Handle click to show dropdown
+        destinationAutoComplete.setOnClickListener(v -> {
+            destinationAutoComplete.showDropDown();
+        });
+    }
+
+
+
     private void setupClickListeners() {
-        backButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
+        backButton.setOnClickListener(v -> finish());
 
-        dateInput.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showDatePicker();
-            }
-        });
+        dateInput.setOnClickListener(v -> showDatePicker());
 
-        timeInput.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showTimePicker();
-            }
-        });
+        timeInput.setOnClickListener(v -> showTimePicker());
 
-        searchButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                performSearch();
-            }
-        });
+        searchButton.setOnClickListener(v -> performSearch());
     }
 
     private void showDatePicker() {
@@ -99,19 +119,15 @@ public class FindRideActivity extends AppCompatActivity {
 
         DatePickerDialog datePickerDialog = new DatePickerDialog(
                 this,
-                R.style.CustomDatePickerTheme, // Add this line
-                new DatePickerDialog.OnDateSetListener() {
-                    @Override
-                    public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-                        String selectedDate = dayOfMonth + "/" + (month + 1) + "/" + year;
-                        dateInput.setText(selectedDate);
-                    }
+                R.style.CustomDatePickerTheme,
+                (view, year1, month1, dayOfMonth) -> {
+                    String selectedDate = dayOfMonth + "/" + (month1 + 1) + "/" + year1;
+                    dateInput.setText(selectedDate);
                 },
                 year, month, day
         );
         datePickerDialog.show();
     }
-
 
     private void showTimePicker() {
         Calendar calendar = Calendar.getInstance();
@@ -120,13 +136,10 @@ public class FindRideActivity extends AppCompatActivity {
 
         TimePickerDialog timePickerDialog = new TimePickerDialog(
                 this,
-                R.style.CustomTimePickerTheme, // Add this line for custom theme
-                new TimePickerDialog.OnTimeSetListener() {
-                    @Override
-                    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-                        String selectedTime = String.format("%02d:%02d", hourOfDay, minute);
-                        timeInput.setText(selectedTime);
-                    }
+                R.style.CustomTimePickerTheme,
+                (view, hourOfDay, minute1) -> {
+                    String selectedTime = String.format("%02d:%02d", hourOfDay, minute1);
+                    timeInput.setText(selectedTime);
                 },
                 hour, minute, false
         );
@@ -134,36 +147,56 @@ public class FindRideActivity extends AppCompatActivity {
     }
 
     private void performSearch() {
-        String pickup = pickupInput.getText().toString().trim();
-        String destination = destinationInput.getText().toString().trim();
+        String pickup = "IUT"; // Always IUT
+        String destination = destinationAutoComplete.getText().toString().trim();
         String date = dateInput.getText().toString().trim();
         String time = timeInput.getText().toString().trim();
 
         // Basic validation
-        if (pickup.isEmpty() || destination.isEmpty() || date.isEmpty() || time.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+        if (destination.isEmpty() || destination.equals("Select Destination")) {
+            destinationAutoComplete.setError("Please select a destination");
             return;
         }
 
-        // FIREBASE TODO: Replace this with Firebase query
-        // Example: Query rides where pickup matches and destination matches and date matches
-        searchRidesInFirebase(pickup, destination, date, time);
+        if (date.isEmpty() || time.isEmpty()) {
+            Toast.makeText(this, "Please fill date and time", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Search rides in SQLite database
+        searchRidesInDatabase(pickup, destination, date, time);
     }
 
-    // FIREBASE TODO: Replace this entire method with Firebase query
-    private void searchRidesInFirebase(String pickup, String destination, String date, String time) {
-        // This is hardcoded data - replace with Firebase query
-        // Firebase query should look like:
-        // DatabaseReference ridesRef = FirebaseDatabase.getInstance().getReference("rides");
-        // Query query = ridesRef.orderByChild("pickup").equalTo(pickup);
-        // Then filter by destination, date, etc.
+    private void searchRidesInDatabase(String pickup, String destination, String date, String time) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
 
-        List<RideData> searchResults = new ArrayList<>();
+        String selection = DatabaseHelper.COLUMN_RIDE_PICKUP + " LIKE ? AND " +
+                DatabaseHelper.COLUMN_RIDE_DESTINATION + " LIKE ? AND " +
+                DatabaseHelper.COLUMN_RIDE_DATE + " = ? AND " +
+                DatabaseHelper.COLUMN_RIDE_STATUS + " = ?";
 
-        // Hardcoded search simulation
-        for (RideData ride : availableRides) {
-            if (ride.getPickup().toLowerCase().contains(pickup.toLowerCase()) &&
-                    ride.getDestination().toLowerCase().contains(destination.toLowerCase())) {
+        String[] selectionArgs = {"%" + pickup + "%", "%" + destination + "%", date, "active"};
+
+        List<Ride> searchResults = new ArrayList<>();
+
+        try (Cursor cursor = db.query(DatabaseHelper.TABLE_RIDES, null, selection, selectionArgs, null, null, null)) {
+            while (cursor.moveToNext()) {
+                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                int driverId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_DRIVER_ID));
+                String pickupDB = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_PICKUP));
+                String destinationDB = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_DESTINATION));
+                String dateDB = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_DATE));
+                String timeDB = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_TIME));
+                int availableSeats = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_SEATS));
+                int pricePerSeat = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_PRICE));
+                String carModel = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_CAR_MODEL));
+                String carColor = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_CAR_COLOR));
+                String licensePlate = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_LICENSE_PLATE));
+                String notes = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_NOTES));
+                String status = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_STATUS));
+
+                Ride ride = new Ride(id, driverId, pickupDB, destinationDB, dateDB, timeDB,
+                        availableSeats, pricePerSeat, carModel, carColor, licensePlate, notes, status);
                 searchResults.add(ride);
             }
         }
@@ -171,7 +204,7 @@ public class FindRideActivity extends AppCompatActivity {
         displaySearchResults(searchResults);
     }
 
-    private void displaySearchResults(List<RideData> rides) {
+    private void displaySearchResults(List<Ride> rides) {
         ridesContainer.removeAllViews();
 
         if (rides.isEmpty()) {
@@ -183,13 +216,13 @@ public class FindRideActivity extends AppCompatActivity {
             ridesContainer.setVisibility(View.VISIBLE);
             noRidesLayout.setVisibility(View.GONE);
 
-            for (RideData ride : rides) {
+            for (Ride ride : rides) {
                 addRideView(ride);
             }
         }
     }
 
-    private void addRideView(RideData ride) {
+    private void addRideView(Ride ride) {
         View rideView = LayoutInflater.from(this).inflate(R.layout.ride_item, ridesContainer, false);
 
         TextView driverName = rideView.findViewById(R.id.driver_name);
@@ -200,82 +233,51 @@ public class FindRideActivity extends AppCompatActivity {
         TextView availableSeats = rideView.findViewById(R.id.available_seats);
         Button bookButton = rideView.findViewById(R.id.book_button);
 
-        // FIREBASE TODO: Get actual data from Firebase ride object
-        driverName.setText(ride.getDriverName());
+        // Get driver name from database
+        String driverNameText = getDriverName(ride.getDriverId());
+        driverName.setText(driverNameText);
 
         // Handle free rides display
-        if (ride.getPrice() == 0) {
+        if (ride.getPricePerSeat() == 0) {
             ridePrice.setText("FREE");
-            ridePrice.setTextColor(getColor(R.color.blue_accent)); // Keep blue color
+            ridePrice.setTextColor(ContextCompat.getColor(this, R.color.blue_accent));
         } else {
-            ridePrice.setText("৳" + ride.getPrice());
+            ridePrice.setText("৳" + ride.getPricePerSeat());
         }
 
-        pickupPoint.setText(ride.getPickup());
+        pickupPoint.setText(ride.getPickupPoint());
         destinationPoint.setText(ride.getDestination());
-        departureTime.setText(ride.getDepartureTime());
+        departureTime.setText(ride.getTime());
         availableSeats.setText(ride.getAvailableSeats() + " seats left");
 
         // Handle book button click
-        bookButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Navigate to booking confirmation with ride data
-                Intent intent = new Intent(FindRideActivity.this, BookingConfirmationActivity.class);
-
-                // FIREBASE TODO: Pass Firebase ride ID instead of hardcoded data
-                intent.putExtra("driverName", ride.getDriverName());
-                intent.putExtra("pickup", ride.getPickup());
-                intent.putExtra("destination", ride.getDestination());
-                intent.putExtra("departureTime", ride.getDepartureTime());
-                intent.putExtra("price", ride.getPrice());
-                intent.putExtra("availableSeats", ride.getAvailableSeats());
-                intent.putExtra("isFree", ride.getPrice() == 0); // Add this flag
-
-                startActivity(intent);
-            }
+        bookButton.setOnClickListener(v -> {
+            Intent intent = new Intent(FindRideActivity.this, BookingConfirmationActivity.class);
+            intent.putExtra("rideId", ride.getId());
+            intent.putExtra("driverName", driverNameText);
+            intent.putExtra("pickup", ride.getPickupPoint());
+            intent.putExtra("destination", ride.getDestination());
+            intent.putExtra("departureTime", ride.getTime());
+            intent.putExtra("price", ride.getPricePerSeat());
+            intent.putExtra("availableSeats", ride.getAvailableSeats());
+            intent.putExtra("isFree", ride.getPricePerSeat() == 0);
+            startActivity(intent);
         });
 
         ridesContainer.addView(rideView);
     }
 
+    private String getDriverName(int driverId) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        String[] columns = {DatabaseHelper.COLUMN_USER_NAME};
+        String selection = DatabaseHelper.COLUMN_ID + " = ?";
+        String[] selectionArgs = {String.valueOf(driverId)};
 
-
-    // FIREBASE TODO: Remove this method and load data from Firebase
-    private void loadHardcodedRides() {
-        availableRides = new ArrayList<>();
-        availableRides.add(new RideData("Ahmed Khan", "IUT Main Gate", "Dhanmondi", "9:00 AM", 2, 150));
-        availableRides.add(new RideData("Sara Islam", "IUT Back Gate", "Gulshan", "10:30 AM", 3, 0)); // FREE ride
-        availableRides.add(new RideData("Rafiq Ahmed", "IUT Main Gate", "Old Dhaka", "2:00 PM", 1, 120));
-        availableRides.add(new RideData("Nasir Uddin", "IUT Main Gate", "Uttara", "4:15 PM", 2, 0)); // FREE ride
-    }
-
-
-    // FIREBASE TODO: Replace this with Firebase data model
-    private static class RideData {
-        private String driverName;
-        private String pickup;
-        private String destination;
-        private String departureTime;
-        private int availableSeats;
-        private int price;
-
-        public RideData(String driverName, String pickup, String destination,
-                        String departureTime, int availableSeats, int price) {
-            this.driverName = driverName;
-            this.pickup = pickup;
-            this.destination = destination;
-            this.departureTime = departureTime;
-            this.availableSeats = availableSeats;
-            this.price = price;
+        try (Cursor cursor = db.query(DatabaseHelper.TABLE_USERS, columns, selection, selectionArgs, null, null, null)) {
+            if (cursor.moveToFirst()) {
+                return cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_NAME));
+            }
         }
-
-        // Getters
-        public String getDriverName() { return driverName; }
-        public String getPickup() { return pickup; }
-        public String getDestination() { return destination; }
-        public String getDepartureTime() { return departureTime; }
-        public int getAvailableSeats() { return availableSeats; }
-        public int getPrice() { return price; }
+        return "Unknown Driver";
     }
 }

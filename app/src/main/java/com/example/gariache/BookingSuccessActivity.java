@@ -9,11 +9,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
-
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Random;
+import androidx.activity.OnBackPressedCallback; // Add this import
 
 public class BookingSuccessActivity extends AppCompatActivity {
 
@@ -22,6 +18,7 @@ public class BookingSuccessActivity extends AppCompatActivity {
     private TextView totalAmountSummary, totalLabel;
     private LinearLayout notesLayout;
     private Button goHomeButton;
+
     private boolean isFreeRide = false;
 
     @Override
@@ -33,6 +30,19 @@ public class BookingSuccessActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
+
+        // Handle back press using new API
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                // Prevent going back to booking form - go to home instead
+                Intent intent = new Intent(BookingSuccessActivity.this, HomeActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, callback);
 
         initializeViews();
         populateBookingDetails();
@@ -49,6 +59,7 @@ public class BookingSuccessActivity extends AppCompatActivity {
         phoneSummary = findViewById(R.id.phone_summary);
         notesSummary = findViewById(R.id.notes_summary);
         totalAmountSummary = findViewById(R.id.total_amount_summary);
+        totalLabel = findViewById(R.id.total_label);
         notesLayout = findViewById(R.id.notes_layout);
         goHomeButton = findViewById(R.id.go_home_button);
     }
@@ -57,6 +68,7 @@ public class BookingSuccessActivity extends AppCompatActivity {
         Intent intent = getIntent();
 
         // Get all the booking data passed from BookingConfirmationActivity
+        long bookingIdFromDB = intent.getLongExtra("bookingId", -1);
         String driverName = intent.getStringExtra("driverName");
         String pickup = intent.getStringExtra("pickup");
         String destination = intent.getStringExtra("destination");
@@ -65,11 +77,10 @@ public class BookingSuccessActivity extends AppCompatActivity {
         int bookedSeats = intent.getIntExtra("bookedSeats", 1);
         String phone = intent.getStringExtra("phone");
         String notes = intent.getStringExtra("notes");
-        isFreeRide = intent.getBooleanExtra("isFree", false); // Get free ride flag
+        isFreeRide = intent.getBooleanExtra("isFree", false);
 
-        // Generate booking ID (FIREBASE TODO: Use actual booking ID from database)
-        String generatedId = generateBookingId();
-        bookingId.setText("#" + generatedId);
+        // Use actual booking ID from database
+        bookingId.setText("#GR" + bookingIdFromDB);
 
         // Populate all fields
         driverNameSummary.setText(driverName);
@@ -97,32 +108,16 @@ public class BookingSuccessActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        goHomeButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Navigate to home and clear all previous activities
-                Intent intent = new Intent(BookingSuccessActivity.this, HomeActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                startActivity(intent);
-                finish();
-            }
+        goHomeButton.setOnClickListener(v -> {
+            // Navigate to home and clear all previous activities
+            Intent intent = new Intent(BookingSuccessActivity.this, HomeActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         });
     }
 
-    // FIREBASE TODO: Replace with actual booking ID generation from Firebase
-    private String generateBookingId() {
-        String prefix = "GR";
-        Random random = new Random();
-        int number = 10000 + random.nextInt(90000); // 5-digit random number
-        return prefix + number;
-    }
-
-    @Override
-    public void onBackPressed() {
-        // Prevent going back to booking form - go to home instead
-        Intent intent = new Intent(BookingSuccessActivity.this, HomeActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
-    }
+    // REMOVE THIS METHOD - No longer needed
+    // @Override
+    // public void onBackPressed() { ... }
 }

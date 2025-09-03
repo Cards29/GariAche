@@ -1,6 +1,10 @@
 package com.example.gariache;
 
+import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -19,10 +23,15 @@ public class LoginActivity extends AppCompatActivity {
     private EditText nameInput, signupEmailInput, phoneInput, studentIdInput, signupPasswordInput;
     private boolean isLoginMode = true;
 
+    private DatabaseHelper dbHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+
+        // Initialize database helper
+        dbHelper = new DatabaseHelper(this);
 
         initializeViews();
         setupClickListeners();
@@ -34,13 +43,10 @@ public class LoginActivity extends AppCompatActivity {
         titleText = findViewById(R.id.title_text);
         subtitleText = findViewById(R.id.subtitle_text);
         toggleText = findViewById(R.id.toggle_text);
-
         loginButton = findViewById(R.id.login_button);
         signupButton = findViewById(R.id.signup_button);
-
         emailInput = findViewById(R.id.email_input);
         passwordInput = findViewById(R.id.password_input);
-
         nameInput = findViewById(R.id.name_input);
         signupEmailInput = findViewById(R.id.signup_email_input);
         phoneInput = findViewById(R.id.phone_input);
@@ -49,26 +55,11 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void setupClickListeners() {
-        toggleText.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                toggleLoginSignupMode();
-            }
-        });
+        toggleText.setOnClickListener(v -> toggleLoginSignupMode());
 
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleLogin();
-            }
-        });
+        loginButton.setOnClickListener(v -> handleLogin());
 
-        signupButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                handleSignup();
-            }
-        });
+        signupButton.setOnClickListener(v -> handleSignup());
     }
 
     private void toggleLoginSignupMode() {
@@ -95,19 +86,41 @@ public class LoginActivity extends AppCompatActivity {
         String email = emailInput.getText().toString().trim();
         String password = passwordInput.getText().toString().trim();
 
-        // Hardcoded login for testing
-        if (email.equals("student@iut-dhaka.edu") && password.equals("123456")) {
-            Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
+        if (email.isEmpty() || password.isEmpty()) {
+            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-            // Navigate to HomeActivity
-            Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
-            startActivity(intent);
-            finish();
-        } else {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        String[] columns = {DatabaseHelper.COLUMN_ID, DatabaseHelper.COLUMN_USER_PASSWORD}; // Add ID column
+        String selection = DatabaseHelper.COLUMN_USER_EMAIL + " = ?";
+        String[] selectionArgs = {email};
+
+        try (Cursor cursor = db.query(DatabaseHelper.TABLE_USERS, columns, selection, selectionArgs, null, null, null)) {
+            if (cursor.moveToFirst()) {
+                String storedPassword = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_USER_PASSWORD));
+                if (password.equals(storedPassword)) {
+
+                    // Save user ID to SharedPreferences for session management
+                    int userId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                    SharedPreferences sharedPref = getSharedPreferences("GariAche", MODE_PRIVATE);
+                    SharedPreferences.Editor editor = sharedPref.edit();
+                    editor.putInt("current_user_id", userId);
+                    editor.apply();
+
+                    Toast.makeText(this, "Login successful!", Toast.LENGTH_SHORT).show();
+
+                    // Navigate to Home page
+                    Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
+                    startActivity(intent);
+                    finish();
+                    return;
+                }
+            }
             Toast.makeText(this, "Invalid credentials", Toast.LENGTH_SHORT).show();
         }
     }
-
 
 
     private void handleSignup() {
@@ -118,8 +131,7 @@ public class LoginActivity extends AppCompatActivity {
         String password = signupPasswordInput.getText().toString().trim();
 
         // Basic validation
-        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() ||
-                studentId.isEmpty() || password.isEmpty()) {
+        if (name.isEmpty() || email.isEmpty() || phone.isEmpty() || studentId.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -129,7 +141,37 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        // TODO: Add Firebase authentication here later
-        Toast.makeText(this, "Signup functionality will be added with Firebase", Toast.LENGTH_SHORT).show();
+        // Check if email or student ID already exists
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        String[] columns = {DatabaseHelper.COLUMN_USER_EMAIL, DatabaseHelper.COLUMN_USER_STUDENT_ID};
+        String selection = DatabaseHelper.COLUMN_USER_EMAIL + " = ? OR " + DatabaseHelper.COLUMN_USER_STUDENT_ID + " = ?";
+        String[] selectionArgs = {email, studentId};
+
+        try (Cursor cursor = db.query(DatabaseHelper.TABLE_USERS, columns, selection, selectionArgs, null, null, null)) {
+            if (cursor.moveToFirst()) {
+                Toast.makeText(this, "Account with this email or student ID already exists", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        // Insert new user
+        ContentValues values = new ContentValues();
+        values.put(DatabaseHelper.COLUMN_USER_NAME, name);
+        values.put(DatabaseHelper.COLUMN_USER_EMAIL, email);
+        values.put(DatabaseHelper.COLUMN_USER_PHONE, phone);
+        values.put(DatabaseHelper.COLUMN_USER_STUDENT_ID, studentId);
+        values.put(DatabaseHelper.COLUMN_USER_PASSWORD, password);
+
+        long newUserId = db.insert(DatabaseHelper.TABLE_USERS, null, values);
+        if (newUserId == -1) {
+            Toast.makeText(this, "Signup failed. Please try again.", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Signup successful! Please login.", Toast.LENGTH_SHORT).show();
+
+            // Switch to login mode for user to login
+            toggleLoginSignupMode();
+        }
     }
 }
+

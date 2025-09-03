@@ -2,10 +2,15 @@ package com.example.gariache;
 
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
+import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.ImageView;
@@ -21,10 +26,13 @@ import java.util.Calendar;
 public class OfferRideActivity extends AppCompatActivity {
 
     private ImageView backButton;
-    private TextInputEditText pickupInput, destinationInput, dateInput, timeInput;
+    private TextInputEditText pickupInput, dateInput, timeInput;
     private TextInputEditText seatsInput, priceInput;
     private TextInputEditText carModelInput, carColorInput, licensePlateInput, notesInput;
+    private AutoCompleteTextView destinationAutoComplete;
     private Button postRideButton;
+
+    private DatabaseHelper dbHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,14 +44,18 @@ public class OfferRideActivity extends AppCompatActivity {
             getSupportActionBar().hide();
         }
 
+        // Initialize database helper
+        dbHelper = new DatabaseHelper(this);
+
         initializeViews();
+        setupDestinationDropdown();
         setupClickListeners();
     }
 
     private void initializeViews() {
         backButton = findViewById(R.id.back_button);
         pickupInput = findViewById(R.id.pickup_input);
-        destinationInput = findViewById(R.id.destination_input);
+        destinationAutoComplete = findViewById(R.id.destination_autocomplete);
         dateInput = findViewById(R.id.date_input);
         timeInput = findViewById(R.id.time_input);
         seatsInput = findViewById(R.id.seats_input);
@@ -53,7 +65,40 @@ public class OfferRideActivity extends AppCompatActivity {
         licensePlateInput = findViewById(R.id.license_plate_input);
         notesInput = findViewById(R.id.notes_input);
         postRideButton = findViewById(R.id.post_ride_button);
+
+        // Fix pickup to IUT and make it non-editable
+        pickupInput.setText("IUT");
+        pickupInput.setFocusable(false);
+        pickupInput.setClickable(false);
+        pickupInput.setCursorVisible(false);
     }
+
+    private void setupDestinationDropdown() {
+        String[] destinations = getResources().getStringArray(R.array.dhaka_destinations);
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.dropdown_item, destinations);
+        destinationAutoComplete.setAdapter(adapter);
+
+        // Set white background for dropdown popup
+        destinationAutoComplete.setDropDownBackgroundResource(R.drawable.white_dropdown_background);
+
+        // Disable keyboard input, only allow selection
+        destinationAutoComplete.setKeyListener(null);
+
+        // Handle item selection
+        destinationAutoComplete.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = (String) parent.getItemAtPosition(position);
+            destinationAutoComplete.setText(selected, false);
+            destinationAutoComplete.dismissDropDown();
+        });
+
+        // Handle click to show dropdown
+        destinationAutoComplete.setOnClickListener(v -> {
+            destinationAutoComplete.showDropDown();
+        });
+    }
+
+
 
     private void setupClickListeners() {
         backButton.setOnClickListener(new View.OnClickListener() {
@@ -128,8 +173,8 @@ public class OfferRideActivity extends AppCompatActivity {
 
     private void handlePostRide() {
         // Get all input values
-        String pickup = pickupInput.getText().toString().trim();
-        String destination = destinationInput.getText().toString().trim();
+        String pickup = "IUT"; // Always IUT now
+        String destination = destinationAutoComplete.getText().toString().trim();
         String date = dateInput.getText().toString().trim();
         String time = timeInput.getText().toString().trim();
         String seats = seatsInput.getText().toString().trim();
@@ -139,14 +184,9 @@ public class OfferRideActivity extends AppCompatActivity {
         String licensePlate = licensePlateInput.getText().toString().trim();
         String notes = notesInput.getText().toString().trim();
 
-        // Validation (same as before until price validation)
-        if (TextUtils.isEmpty(pickup)) {
-            pickupInput.setError("Please enter pickup point");
-            return;
-        }
-
-        if (TextUtils.isEmpty(destination)) {
-            destinationInput.setError("Please enter destination");
+        // Validation
+        if (destination.isEmpty() || destination.equals("Select Destination")) {
+            destinationAutoComplete.setError("Please select a destination");
             return;
         }
 
@@ -164,12 +204,6 @@ public class OfferRideActivity extends AppCompatActivity {
             seatsInput.setError("Please enter available seats");
             return;
         }
-
-        // Modified price validation - allow empty for free rides
-        // if (TextUtils.isEmpty(price)) {
-        //     priceInput.setError("Please enter price per seat");
-        //     return;
-        // }
 
         if (TextUtils.isEmpty(carModel)) {
             carModelInput.setError("Please enter car model");
@@ -204,23 +238,52 @@ public class OfferRideActivity extends AppCompatActivity {
                 return;
             }
 
-            // FIREBASE TODO: Save ride to Firebase Database with pricePerSeat (0 for free)
+            // Get current logged-in user ID
+            SharedPreferences sharedPref = getSharedPreferences("GariAche", MODE_PRIVATE);
+            int currentUserId = sharedPref.getInt("current_user_id", -1);
 
-            String message = pricePerSeat == 0 ?
-                    "Free ride posted successfully! Passengers can now book your ride." :
-                    "Ride posted successfully! Passengers can now book your ride.";
+            if (currentUserId == -1) {
+                Toast.makeText(this, "Please login again", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            // Save ride to SQLite Database
+            SQLiteDatabase db = dbHelper.getWritableDatabase();
 
-            // Return to home screen
-            Intent intent = new Intent(OfferRideActivity.this, HomeActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(intent);
-            finish();
+            ContentValues values = new ContentValues();
+            values.put(DatabaseHelper.COLUMN_RIDE_DRIVER_ID, currentUserId);
+            values.put(DatabaseHelper.COLUMN_RIDE_PICKUP, pickup);
+            values.put(DatabaseHelper.COLUMN_RIDE_DESTINATION, destination);
+            values.put(DatabaseHelper.COLUMN_RIDE_DATE, date);
+            values.put(DatabaseHelper.COLUMN_RIDE_TIME, time);
+            values.put(DatabaseHelper.COLUMN_RIDE_SEATS, availableSeats);
+            values.put(DatabaseHelper.COLUMN_RIDE_PRICE, pricePerSeat);
+            values.put(DatabaseHelper.COLUMN_RIDE_CAR_MODEL, carModel);
+            values.put(DatabaseHelper.COLUMN_RIDE_CAR_COLOR, carColor);
+            values.put(DatabaseHelper.COLUMN_RIDE_LICENSE_PLATE, licensePlate);
+            values.put(DatabaseHelper.COLUMN_RIDE_NOTES, notes);
+            values.put(DatabaseHelper.COLUMN_RIDE_STATUS, "active");
+
+            long newRideId = db.insert(DatabaseHelper.TABLE_RIDES, null, values);
+
+            if (newRideId == -1) {
+                Toast.makeText(this, "Failed to post ride. Please try again.", Toast.LENGTH_SHORT).show();
+            } else {
+                String message = pricePerSeat == 0 ?
+                        "Free ride posted successfully! Passengers can now book your ride." :
+                        "Ride posted successfully! Passengers can now book your ride.";
+
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+
+                // Return to home screen
+                Intent intent = new Intent(OfferRideActivity.this, HomeActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(intent);
+                finish();
+            }
 
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Please enter valid numbers for seats and price", Toast.LENGTH_SHORT).show();
         }
     }
-
 }

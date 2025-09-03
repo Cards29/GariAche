@@ -277,7 +277,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Total Price -->
+        <!-- Total Amount Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -294,6 +294,7 @@
                 android:padding="20dp">
 
                 <TextView
+                    android:id="@+id/total_label"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -310,6 +311,7 @@
                     android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="@color/white" />
+
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
