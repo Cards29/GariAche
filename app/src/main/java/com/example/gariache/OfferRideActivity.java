@@ -25,6 +25,7 @@ import java.util.Calendar;
 
 public class OfferRideActivity extends AppCompatActivity {
 
+    // UI Elements
     private ImageView backButton;
     private TextInputEditText pickupInput, dateInput, timeInput;
     private TextInputEditText seatsInput, priceInput;
@@ -32,6 +33,7 @@ public class OfferRideActivity extends AppCompatActivity {
     private AutoCompleteTextView destinationAutoComplete;
     private Button postRideButton;
 
+    // Database helper
     private DatabaseHelper dbHelper;
 
     @Override
@@ -39,7 +41,7 @@ public class OfferRideActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_offer_ride);
 
-        // Hide action bar
+        // Hide action bar for cleaner UI
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
@@ -47,11 +49,19 @@ public class OfferRideActivity extends AppCompatActivity {
         // Initialize database helper
         dbHelper = new DatabaseHelper(this);
 
+        // Initialize all UI components
         initializeViews();
+
+        // Setup destination dropdown with predefined locations
         setupDestinationDropdown();
+
+        // Setup click listeners for buttons and inputs
         setupClickListeners();
     }
 
+    /**
+     * Initialize all UI views and set pickup to IUT (non-editable)
+     */
     private void initializeViews() {
         backButton = findViewById(R.id.back_button);
         pickupInput = findViewById(R.id.pickup_input);
@@ -73,34 +83,41 @@ public class OfferRideActivity extends AppCompatActivity {
         pickupInput.setCursorVisible(false);
     }
 
+    /**
+     * Setup destination dropdown with popular Dhaka locations
+     */
     private void setupDestinationDropdown() {
+        // Load destinations from string array resource
         String[] destinations = getResources().getStringArray(R.array.dhaka_destinations);
 
+        // Create adapter with custom dropdown item layout
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, R.layout.dropdown_item, destinations);
         destinationAutoComplete.setAdapter(adapter);
 
         // Set white background for dropdown popup
         destinationAutoComplete.setDropDownBackgroundResource(R.drawable.white_dropdown_background);
 
-        // Disable keyboard input, only allow selection
+        // Disable keyboard input, only allow selection from dropdown
         destinationAutoComplete.setKeyListener(null);
 
-        // Handle item selection
+        // Handle item selection from dropdown
         destinationAutoComplete.setOnItemClickListener((parent, view, position, id) -> {
             String selected = (String) parent.getItemAtPosition(position);
             destinationAutoComplete.setText(selected, false);
             destinationAutoComplete.dismissDropDown();
         });
 
-        // Handle click to show dropdown
+        // Show dropdown when user clicks on the field
         destinationAutoComplete.setOnClickListener(v -> {
             destinationAutoComplete.showDropDown();
         });
     }
 
-
-
+    /**
+     * Setup click listeners for all interactive UI elements
+     */
     private void setupClickListeners() {
+        // Back button - return to previous screen
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -108,6 +125,7 @@ public class OfferRideActivity extends AppCompatActivity {
             }
         });
 
+        // Date input - show date picker dialog
         dateInput.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -115,6 +133,7 @@ public class OfferRideActivity extends AppCompatActivity {
             }
         });
 
+        // Time input - show time picker dialog
         timeInput.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -122,6 +141,7 @@ public class OfferRideActivity extends AppCompatActivity {
             }
         });
 
+        // Post ride button - validate and submit ride
         postRideButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -130,6 +150,9 @@ public class OfferRideActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Show date picker dialog for selecting ride date
+     */
     private void showDatePicker() {
         Calendar calendar = Calendar.getInstance();
         int year = calendar.get(Calendar.YEAR);
@@ -142,6 +165,7 @@ public class OfferRideActivity extends AppCompatActivity {
                 new DatePickerDialog.OnDateSetListener() {
                     @Override
                     public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+                        // Format: DD/MM/YYYY
                         String selectedDate = dayOfMonth + "/" + (month + 1) + "/" + year;
                         dateInput.setText(selectedDate);
                     }
@@ -151,6 +175,9 @@ public class OfferRideActivity extends AppCompatActivity {
         datePickerDialog.show();
     }
 
+    /**
+     * Show time picker dialog for selecting ride time
+     */
     private void showTimePicker() {
         Calendar calendar = Calendar.getInstance();
         int hour = calendar.get(Calendar.HOUR_OF_DAY);
@@ -162,6 +189,7 @@ public class OfferRideActivity extends AppCompatActivity {
                 new TimePickerDialog.OnTimeSetListener() {
                     @Override
                     public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
+                        // Format: HH:MM (24-hour format)
                         String selectedTime = String.format("%02d:%02d", hourOfDay, minute);
                         timeInput.setText(selectedTime);
                     }
@@ -171,9 +199,12 @@ public class OfferRideActivity extends AppCompatActivity {
         timePickerDialog.show();
     }
 
+    /**
+     * Handle ride posting: validate inputs, save to database, and navigate to success screen
+     */
     private void handlePostRide() {
         // Get all input values
-        String pickup = "IUT"; // Always IUT now
+        String pickup = "IUT"; // Always IUT (fixed)
         String destination = destinationAutoComplete.getText().toString().trim();
         String date = dateInput.getText().toString().trim();
         String time = timeInput.getText().toString().trim();
@@ -184,7 +215,7 @@ public class OfferRideActivity extends AppCompatActivity {
         String licensePlate = licensePlateInput.getText().toString().trim();
         String notes = notesInput.getText().toString().trim();
 
-        // Validation
+        // Validate all required fields
         if (destination.isEmpty() || destination.equals("Select Destination")) {
             destinationAutoComplete.setError("Please select a destination");
             return;
@@ -221,6 +252,7 @@ public class OfferRideActivity extends AppCompatActivity {
         }
 
         try {
+            // Parse and validate numeric inputs
             int availableSeats = Integer.parseInt(seats);
 
             // Handle free rides - if price is empty, set to 0
@@ -233,12 +265,13 @@ public class OfferRideActivity extends AppCompatActivity {
                 }
             }
 
+            // Validate seat count
             if (availableSeats <= 0 || availableSeats > 8) {
                 seatsInput.setError("Please enter valid number of seats (1-8)");
                 return;
             }
 
-            // Get current logged-in user ID
+            // Get current logged-in user ID from SharedPreferences
             SharedPreferences sharedPref = getSharedPreferences("GariAche", MODE_PRIVATE);
             int currentUserId = sharedPref.getInt("current_user_id", -1);
 
@@ -267,22 +300,37 @@ public class OfferRideActivity extends AppCompatActivity {
             long newRideId = db.insert(DatabaseHelper.TABLE_RIDES, null, values);
 
             if (newRideId == -1) {
+                // Database insertion failed
                 Toast.makeText(this, "Failed to post ride. Please try again.", Toast.LENGTH_SHORT).show();
             } else {
-                String message = pricePerSeat == 0 ?
-                        "Free ride posted successfully! Passengers can now book your ride." :
-                        "Ride posted successfully! Passengers can now book your ride.";
+                // Successfully posted ride - navigate to success screen
 
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+                // Get current user name from SharedPreferences
+                String driverName = sharedPref.getString("user_name", "Driver");
 
-                // Return to home screen
-                Intent intent = new Intent(OfferRideActivity.this, HomeActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                // Create intent to launch OfferRideSuccessActivity
+                Intent intent = new Intent(OfferRideActivity.this, OfferRideSuccessActivity.class);
+
+                // Pass all ride details to success screen
+                intent.putExtra("driverName", driverName);
+                intent.putExtra("pickup", pickup);
+                intent.putExtra("destination", destination);
+                intent.putExtra("date", date);
+                intent.putExtra("time", time);
+                intent.putExtra("seats", availableSeats);
+                intent.putExtra("price", pricePerSeat);
+                intent.putExtra("carModel", carModel);
+                intent.putExtra("carColor", carColor);
+                intent.putExtra("license", licensePlate);
+                intent.putExtra("notes", notes);
+
+                // Launch success screen and close this activity
                 startActivity(intent);
                 finish();
             }
 
         } catch (NumberFormatException e) {
+            // Handle invalid number format for seats or price
             Toast.makeText(this, "Please enter valid numbers for seats and price", Toast.LENGTH_SHORT).show();
         }
     }

@@ -11,7 +11,7 @@ import android.widget.TextView;
 
 public class HomeActivity extends AppCompatActivity {
     private CardView findRideCard, offerRideCard;
-    private TextView myRidesText, logoutText;
+    private TextView myRidesText, logoutText, profileText;;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +47,7 @@ public class HomeActivity extends AppCompatActivity {
         offerRideCard = findViewById(R.id.offer_ride_card);
         myRidesText = findViewById(R.id.my_rides_text);
         logoutText = findViewById(R.id.logout_text);
+        profileText = findViewById(R.id.profile_text);
     }
 
     private void setupClickListeners() {
@@ -72,6 +73,11 @@ public class HomeActivity extends AppCompatActivity {
                 Intent intent = new Intent(HomeActivity.this, ViewMyRidesActivity.class);
                 startActivity(intent);
             }
+        });
+
+        profileText.setOnClickListener(v -> {
+            Intent intent = new Intent(HomeActivity.this, ProfileActivity.class);
+            startActivity(intent);
         });
 
         logoutText.setOnClickListener(new View.OnClickListener() {

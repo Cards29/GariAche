@@ -1,7 +1,6 @@
 package com.example.gariache;
 
 import android.app.DatePickerDialog;
-import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -15,7 +14,6 @@ import android.widget.DatePicker;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.TimePicker;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -29,7 +27,7 @@ import java.util.List;
 
 public class FindRideActivity extends AppCompatActivity {
 
-    private TextInputEditText pickupInput, dateInput, timeInput;
+    private TextInputEditText pickupInput, dateInput; // REMOVED: timeInput
     private AutoCompleteTextView destinationAutoComplete;
     private Button searchButton;
     private ImageView backButton;
@@ -60,7 +58,7 @@ public class FindRideActivity extends AppCompatActivity {
         pickupInput = findViewById(R.id.pickup_input);
         destinationAutoComplete = findViewById(R.id.destination_autocomplete);
         dateInput = findViewById(R.id.date_input);
-        timeInput = findViewById(R.id.time_input);
+        // REMOVED: timeInput = findViewById(R.id.time_input);
         searchButton = findViewById(R.id.search_button);
         backButton = findViewById(R.id.back_button);
         ridesContainer = findViewById(R.id.rides_container);
@@ -99,14 +97,12 @@ public class FindRideActivity extends AppCompatActivity {
         });
     }
 
-
-
     private void setupClickListeners() {
         backButton.setOnClickListener(v -> finish());
 
         dateInput.setOnClickListener(v -> showDatePicker());
 
-        timeInput.setOnClickListener(v -> showTimePicker());
+        // REMOVED: timeInput.setOnClickListener(v -> showTimePicker());
 
         searchButton.setOnClickListener(v -> performSearch());
     }
@@ -129,45 +125,30 @@ public class FindRideActivity extends AppCompatActivity {
         datePickerDialog.show();
     }
 
-    private void showTimePicker() {
-        Calendar calendar = Calendar.getInstance();
-        int hour = calendar.get(Calendar.HOUR_OF_DAY);
-        int minute = calendar.get(Calendar.MINUTE);
-
-        TimePickerDialog timePickerDialog = new TimePickerDialog(
-                this,
-                R.style.CustomTimePickerTheme,
-                (view, hourOfDay, minute1) -> {
-                    String selectedTime = String.format("%02d:%02d", hourOfDay, minute1);
-                    timeInput.setText(selectedTime);
-                },
-                hour, minute, false
-        );
-        timePickerDialog.show();
-    }
+    // REMOVED: showTimePicker() method entirely
 
     private void performSearch() {
         String pickup = "IUT"; // Always IUT
         String destination = destinationAutoComplete.getText().toString().trim();
         String date = dateInput.getText().toString().trim();
-        String time = timeInput.getText().toString().trim();
+        // REMOVED: String time = timeInput.getText().toString().trim();
 
-        // Basic validation
+        // Basic validation - UPDATED: removed time validation
         if (destination.isEmpty() || destination.equals("Select Destination")) {
             destinationAutoComplete.setError("Please select a destination");
             return;
         }
 
-        if (date.isEmpty() || time.isEmpty()) {
-            Toast.makeText(this, "Please fill date and time", Toast.LENGTH_SHORT).show();
+        if (date.isEmpty()) { // UPDATED: only check date, not time
+            Toast.makeText(this, "Please select a date", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Search rides in SQLite database
-        searchRidesInDatabase(pickup, destination, date, time);
+        // Search rides in SQLite database - UPDATED: removed time parameter
+        searchRidesInDatabase(pickup, destination, date);
     }
 
-    private void searchRidesInDatabase(String pickup, String destination, String date, String time) {
+    private void searchRidesInDatabase(String pickup, String destination, String date) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
 
         String selection = DatabaseHelper.COLUMN_RIDE_PICKUP + " LIKE ? AND " +
@@ -247,7 +228,9 @@ public class FindRideActivity extends AppCompatActivity {
 
         pickupPoint.setText(ride.getPickupPoint());
         destinationPoint.setText(ride.getDestination());
-        departureTime.setText(ride.getTime());
+
+        // UPDATED: Show both date and time since passenger needs to know exact departure time
+        departureTime.setText(ride.getDate() + " at " + ride.getTime());
         availableSeats.setText(ride.getAvailableSeats() + " seats left");
 
         // Handle book button click
@@ -257,7 +240,7 @@ public class FindRideActivity extends AppCompatActivity {
             intent.putExtra("driverName", driverNameText);
             intent.putExtra("pickup", ride.getPickupPoint());
             intent.putExtra("destination", ride.getDestination());
-            intent.putExtra("departureTime", ride.getTime());
+            intent.putExtra("departureTime", ride.getDate() + " at " + ride.getTime()); // UPDATED: show full datetime
             intent.putExtra("price", ride.getPricePerSeat());
             intent.putExtra("availableSeats", ride.getAvailableSeats());
             intent.putExtra("isFree", ride.getPricePerSeat() == 0);

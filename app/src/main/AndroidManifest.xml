@@ -12,6 +12,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GariAche">
         <activity
+            android:name=".ProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".OfferRideSuccessActivity"
+            android:exported="false" />
+        <activity
             android:name=".ViewMyRidesActivity"
             android:exported="false" />
         <activity

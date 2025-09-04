@@ -1,5 +1,8 @@
 <resources>
     <!-- Your existing strings -->
+<!--    <string name="app_name">GariAche</string>-->
+<!--    <string name="navigation_drawer_open">Open navigation drawer</string>-->
+<!--    <string name="navigation_drawer_close">Close navigation drawer</string>-->
 
     <!-- Dhaka Destinations -->
     <string-array name="dhaka_destinations">
