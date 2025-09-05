@@ -2,6 +2,7 @@ package com.example.gariache;
 
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -214,11 +215,21 @@ public class FindRideActivity extends AppCompatActivity {
         TextView availableSeats = rideView.findViewById(R.id.available_seats);
         Button bookButton = rideView.findViewById(R.id.book_button);
 
+        // Get current logged-in user ID
+        SharedPreferences prefs = getSharedPreferences("GariAche", MODE_PRIVATE);
+        int currentUserId = prefs.getInt("current_user_id", -1);
+
         // Get driver name from database
         String driverNameText = getDriverName(ride.getDriverId());
         driverName.setText(driverNameText);
 
-        // Handle free rides display
+        // Set ride details
+        pickupPoint.setText(ride.getPickupPoint());
+        destinationPoint.setText(ride.getDestination());
+        departureTime.setText(ride.getDate() + " at " + ride.getTime());
+        availableSeats.setText(ride.getAvailableSeats() + " seats left");
+
+        // Handle pricing
         if (ride.getPricePerSeat() == 0) {
             ridePrice.setText("FREE");
             ridePrice.setTextColor(ContextCompat.getColor(this, R.color.blue_accent));
@@ -226,29 +237,57 @@ public class FindRideActivity extends AppCompatActivity {
             ridePrice.setText("৳" + ride.getPricePerSeat());
         }
 
-        pickupPoint.setText(ride.getPickupPoint());
-        destinationPoint.setText(ride.getDestination());
+        // ✅ NEW: Check if this is the user's own ride
+        if (currentUserId == ride.getDriverId()) {
+            // This is the user's own ride - disable booking
+            bookButton.setText("Your Ride");
+            bookButton.setEnabled(false);
+            bookButton.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.green_success));
+            bookButton.setTextColor(ContextCompat.getColor(this, R.color.white));
 
-        // UPDATED: Show both date and time since passenger needs to know exact departure time
-        departureTime.setText(ride.getDate() + " at " + ride.getTime());
-        availableSeats.setText(ride.getAvailableSeats() + " seats left");
+            // No click listener needed for own rides
+            bookButton.setOnClickListener(v -> {
+                Toast.makeText(this, "You cannot book your own ride", Toast.LENGTH_SHORT).show();
+            });
+        }
+        // Check if no seats available
+        else if (ride.getAvailableSeats() <= 0) {
+            // No seats available - disable button
+            bookButton.setText("No seats left");
+            bookButton.setEnabled(false);
+            bookButton.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.grey));
+            bookButton.setTextColor(ContextCompat.getColor(this, R.color.white));
 
-        // Handle book button click
-        bookButton.setOnClickListener(v -> {
-            Intent intent = new Intent(FindRideActivity.this, BookingConfirmationActivity.class);
-            intent.putExtra("rideId", ride.getId());
-            intent.putExtra("driverName", driverNameText);
-            intent.putExtra("pickup", ride.getPickupPoint());
-            intent.putExtra("destination", ride.getDestination());
-            intent.putExtra("departureTime", ride.getDate() + " at " + ride.getTime()); // UPDATED: show full datetime
-            intent.putExtra("price", ride.getPricePerSeat());
-            intent.putExtra("availableSeats", ride.getAvailableSeats());
-            intent.putExtra("isFree", ride.getPricePerSeat() == 0);
-            startActivity(intent);
-        });
+            bookButton.setOnClickListener(v -> {
+                Toast.makeText(this, "This ride is fully booked", Toast.LENGTH_SHORT).show();
+            });
+        }
+        // Normal booking available
+        else {
+            // Seats available and not own ride - enable booking
+            bookButton.setText("Book This Ride");
+            bookButton.setEnabled(true);
+            bookButton.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.blue_primary));
+            bookButton.setTextColor(ContextCompat.getColor(this, R.color.white));
+
+            // Handle book button click
+            bookButton.setOnClickListener(v -> {
+                Intent intent = new Intent(FindRideActivity.this, BookingConfirmationActivity.class);
+                intent.putExtra("rideId", ride.getId());
+                intent.putExtra("driverName", driverNameText);
+                intent.putExtra("pickup", ride.getPickupPoint());
+                intent.putExtra("destination", ride.getDestination());
+                intent.putExtra("departureTime", ride.getDate() + " at " + ride.getTime());
+                intent.putExtra("price", ride.getPricePerSeat());
+                intent.putExtra("availableSeats", ride.getAvailableSeats());
+                intent.putExtra("isFree", ride.getPricePerSeat() == 0);
+                startActivity(intent);
+            });
+        }
 
         ridesContainer.addView(rideView);
     }
+
 
     private String getDriverName(int driverId) {
         SQLiteDatabase db = dbHelper.getReadableDatabase();
