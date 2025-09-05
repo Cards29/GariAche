@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -40,4 +41,10 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+    implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
+    // ✅ ADD THESE - Firebase products you want to use
+    implementation("com.google.firebase:firebase-database")      // Realtime Database
+    implementation("com.google.firebase:firebase-auth")         // Authentication
+    implementation("com.google.firebase:firebase-analytics")    // Analytics (optional but recommended)
 }
