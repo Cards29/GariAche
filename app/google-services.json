@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "716264039339",
+    "project_id": "gariache",
+    "storage_bucket": "gariache.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:716264039339:android:f2516dc14c2707b806e8ee",
+        "android_client_info": {
+          "package_name": "com.example.gariache"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGP1S3yMgmjbyLKi4abk6M1goUo9mGBxI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
