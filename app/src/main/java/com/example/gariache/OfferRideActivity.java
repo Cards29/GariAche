@@ -23,6 +23,8 @@ import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.Calendar;
 
+import com.google.firebase.database.FirebaseDatabase;
+
 public class OfferRideActivity extends AppCompatActivity {
 
     // UI Elements
@@ -32,6 +34,7 @@ public class OfferRideActivity extends AppCompatActivity {
     private TextInputEditText carModelInput, carColorInput, licensePlateInput, notesInput;
     private AutoCompleteTextView destinationAutoComplete;
     private Button postRideButton;
+    FirebaseDatabase database = FirebaseDatabase.getInstance();
 
     // Database helper
     private DatabaseHelper dbHelper;

@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import com.google.firebase.database.FirebaseDatabase;
+
 public class FindRideActivity extends AppCompatActivity {
 
     private TextInputEditText pickupInput, dateInput; // REMOVED: timeInput
@@ -34,8 +36,8 @@ public class FindRideActivity extends AppCompatActivity {
     private ImageView backButton;
     private LinearLayout ridesContainer, noRidesLayout;
     private TextView availableRidesTitle;
-
     private DatabaseHelper dbHelper;
+    FirebaseDatabase database = FirebaseDatabase.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -163,7 +165,7 @@ public class FindRideActivity extends AppCompatActivity {
 
         try (Cursor cursor = db.query(DatabaseHelper.TABLE_RIDES, null, selection, selectionArgs, null, null, null)) {
             while (cursor.moveToNext()) {
-                int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+                String id = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
                 int driverId = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_DRIVER_ID));
                 String pickupDB = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_PICKUP));
                 String destinationDB = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_RIDE_DESTINATION));

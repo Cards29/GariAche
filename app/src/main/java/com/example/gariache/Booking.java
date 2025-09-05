@@ -1,7 +1,7 @@
 package com.example.gariache;
 
 public class Booking {
-    private int id;
+    private String id;
     private int rideId;
     private int passengerId;
     private int bookedSeats;
@@ -10,7 +10,10 @@ public class Booking {
     private String bookingDate; // e.g., "2025-09-01 15:00"
     private String status; // e.g., confirmed/completed/cancelled
 
-    public Booking(int id, int rideId, int passengerId, int bookedSeats, String passengerPhone,
+    // No-arg constructor for Firebase
+    public Booking() {}
+
+    public Booking(String id, int rideId, int passengerId, int bookedSeats, String passengerPhone,
                    String notes, String bookingDate, String status) {
         this.id = id;
         this.rideId = rideId;
@@ -23,7 +26,7 @@ public class Booking {
     }
 
     // Getters
-    public int getId() { return id; }
+    public String getId() { return id; }
     public int getRideId() { return rideId; }
     public int getPassengerId() { return passengerId; }
     public int getBookedSeats() { return bookedSeats; }
@@ -33,7 +36,7 @@ public class Booking {
     public String getStatus() { return status; }
 
     // Setters
-    public void setId(int id) { this.id = id; }
+    public void setId(String id) { this.id = id; }
     public void setRideId(int rideId) { this.rideId = rideId; }
     public void setPassengerId(int passengerId) { this.passengerId = passengerId; }
     public void setBookedSeats(int bookedSeats) { this.bookedSeats = bookedSeats; }

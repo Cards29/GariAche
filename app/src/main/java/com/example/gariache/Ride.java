@@ -1,7 +1,7 @@
 package com.example.gariache;
 
 public class Ride {
-    private int id;
+    private String id;
     private int driverId; // Foreign key to User.id
     private String pickupPoint;
     private String destination;
@@ -15,7 +15,10 @@ public class Ride {
     private String notes;
     private String status; // e.g., active/completed/cancelled
 
-    public Ride(int id, int driverId, String pickupPoint, String destination, String date, String time,
+    // No-arg constructor for Firebase
+    public Ride() {}
+
+    public Ride(String id, int driverId, String pickupPoint, String destination, String date, String time,
                 int availableSeats, int pricePerSeat, String carModel, String carColor, String licensePlate, String notes, String status) {
         this.id = id;
         this.driverId = driverId;
@@ -33,7 +36,7 @@ public class Ride {
     }
 
     // Getters
-    public int getId() { return id; }
+    public String getId() { return id; }
     public int getDriverId() { return driverId; }
     public String getPickupPoint() { return pickupPoint; }
     public String getDestination() { return destination; }
@@ -48,7 +51,7 @@ public class Ride {
     public String getStatus() { return status; }
 
     // Setters
-    public void setId(int id) { this.id = id; }
+    public void setId(String id) { this.id = id; }
     public void setDriverId(int driverId) { this.driverId = driverId; }
     public void setPickupPoint(String pickupPoint) { this.pickupPoint = pickupPoint; }
     public void setDestination(String destination) { this.destination = destination; }
